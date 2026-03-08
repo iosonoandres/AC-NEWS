@@ -23,8 +23,10 @@ class Settings(BaseSettings):
     request_timeout_seconds: float = 10.0
     news_cache_ttl_seconds: int = 300
     feedback_ttl_hours: int = 24
+    auth_retention_days: int = 30
 
     users_file: Path = Path("data/users.json")
+    sessions_file: Path = Path("data/sessions.json")
     comments_file: Path = Path("data/comments.json")
     ratings_file: Path = Path("data/ratings.json")
 

@@ -17,10 +17,13 @@ _USERNAME_RE = re.compile(r"^[A-Za-z0-9_]{3,20}$")
 
 
 class AuthService:
-    def __init__(self, user_store: JsonUserStore) -> None:
+    def __init__(self, user_store: JsonUserStore, retention_days: int = 30) -> None:
         self.user_store = user_store
+        self.retention_days = retention_days
 
     def ensure_session(self, telegram_user: dict) -> UserSession:
+        self.purge_expired_data()
+
         telegram_id = int(telegram_user["id"])
         session = self.user_store.get_session(telegram_id)
 
@@ -35,6 +38,9 @@ class AuthService:
             session.first_name = (telegram_user.get("first_name") or session.first_name or "").strip()
 
         return self.user_store.upsert_session(session)
+
+    def purge_expired_data(self) -> tuple[int, int]:
+        return self.user_store.purge_expired(self.retention_days)
 
     def get_session(self, telegram_id: int) -> UserSession | None:
         return self.user_store.get_session(telegram_id)
@@ -75,18 +81,20 @@ class AuthService:
         if len(password) < 6:
             return False, "Password troppo corta. Minimo 6 caratteri."
 
+        now_iso = datetime.now(timezone.utc).isoformat()
         salt = secrets.token_hex(8)
         password_hash = self._hash_password(password, salt)
         account = Account(
             username=session.pending_username,
             password_salt=salt,
             password_hash=password_hash,
+            last_login_at=now_iso,
         )
         self.user_store.upsert_account(account)
 
         session.is_logged_in = True
         session.account_username = account.username
-        session.last_login_at = datetime.now(timezone.utc).isoformat()
+        session.last_login_at = now_iso
         session.pending_state = ""
         session.pending_username = ""
         session.pending_news_id = ""
@@ -133,9 +141,13 @@ class AuthService:
         if candidate_hash != account.password_hash:
             return False, "Password errata. Riprova."
 
+        now_iso = datetime.now(timezone.utc).isoformat()
+        account.last_login_at = now_iso
+        self.user_store.upsert_account(account)
+
         session.is_logged_in = True
         session.account_username = account.username
-        session.last_login_at = datetime.now(timezone.utc).isoformat()
+        session.last_login_at = now_iso
         session.pending_state = ""
         session.pending_username = ""
         session.pending_news_id = ""
@@ -153,6 +165,7 @@ class AuthService:
         session.pending_state = ""
         session.pending_username = ""
         session.pending_news_id = ""
+        session.last_news_message_id = 0
         return self.user_store.upsert_session(session)
 
     def set_selected_category(self, telegram_id: int, category_code: str) -> UserSession | None:
@@ -198,6 +211,22 @@ class AuthService:
             return None
 
         session.current_news_id = news_id
+        return self.user_store.upsert_session(session)
+
+    def set_last_news_message_id(self, telegram_id: int, message_id: int) -> UserSession | None:
+        session = self.user_store.get_session(telegram_id)
+        if not session:
+            return None
+
+        session.last_news_message_id = max(0, int(message_id))
+        return self.user_store.upsert_session(session)
+
+    def clear_last_news_message_id(self, telegram_id: int) -> UserSession | None:
+        session = self.user_store.get_session(telegram_id)
+        if not session:
+            return None
+
+        session.last_news_message_id = 0
         return self.user_store.upsert_session(session)
 
     def start_comment_flow(self, telegram_id: int, news_id: str) -> UserSession | None:

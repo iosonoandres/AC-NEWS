@@ -24,14 +24,17 @@ class Account:
     password_salt: str
     password_hash: str
     created_at: str = field(default_factory=utc_now_iso)
+    last_login_at: str = field(default_factory=utc_now_iso)
 
     @classmethod
     def from_dict(cls, data: dict) -> "Account":
+        created_at = (data.get("created_at") or utc_now_iso()).strip()
         return cls(
             username=(data.get("username") or "").strip(),
             password_salt=(data.get("password_salt") or "").strip(),
             password_hash=(data.get("password_hash") or "").strip(),
-            created_at=(data.get("created_at") or utc_now_iso()).strip(),
+            created_at=created_at,
+            last_login_at=(data.get("last_login_at") or created_at).strip(),
         )
 
     def to_dict(self) -> dict:
@@ -40,6 +43,7 @@ class Account:
             "password_salt": self.password_salt,
             "password_hash": self.password_hash,
             "created_at": self.created_at,
+            "last_login_at": self.last_login_at,
         }
 
 
@@ -53,6 +57,7 @@ class UserSession:
     selected_category: str = ""
     news_cursor: dict[str, int] = field(default_factory=dict)
     current_news_id: str = ""
+    last_news_message_id: int = 0
     pending_state: str = ""
     pending_username: str = ""
     pending_news_id: str = ""
@@ -74,6 +79,7 @@ class UserSession:
                 for category_code, cursor in (data.get("news_cursor") or {}).items()
             },
             current_news_id=(data.get("current_news_id") or "").strip(),
+            last_news_message_id=int(data.get("last_news_message_id") or 0),
             pending_state=(data.get("pending_state") or "").strip(),
             pending_username=(data.get("pending_username") or "").strip(),
             pending_news_id=(data.get("pending_news_id") or "").strip(),
@@ -92,6 +98,7 @@ class UserSession:
             "selected_category": self.selected_category,
             "news_cursor": self.news_cursor,
             "current_news_id": self.current_news_id,
+            "last_news_message_id": self.last_news_message_id,
             "pending_state": self.pending_state,
             "pending_username": self.pending_username,
             "pending_news_id": self.pending_news_id,

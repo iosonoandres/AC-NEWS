@@ -379,6 +379,7 @@ class TelegramBotService:
 
         average, votes = self.feedback_service.get_rating_summary(item.news_id)
         comments_count = self.feedback_service.get_comment_count(item.news_id)
+        previous_message_id = session.last_news_message_id
 
         caption = self._format_news_message(
             item,
@@ -390,14 +391,17 @@ class TelegramBotService:
             for_caption=True,
         )
 
+        await self._delete_previous_news_message(chat_id, previous_message_id)
+
         if item.image_url:
-            sent = await self.telegram_client.send_photo(
+            sent_message_id = await self.telegram_client.send_photo(
                 chat_id,
                 photo_url=item.image_url,
                 caption=caption,
                 reply_markup=news_navigation_keyboard(),
             )
-            if sent:
+            if sent_message_id:
+                self.auth_service.set_last_news_message_id(telegram_id, sent_message_id)
                 return
 
         text = self._format_news_message(
@@ -409,11 +413,13 @@ class TelegramBotService:
             comments_count,
             for_caption=False,
         )
-        await self.telegram_client.send_message(
+        sent_message_id = await self.telegram_client.send_message(
             chat_id,
             text,
             reply_markup=news_navigation_keyboard(),
         )
+        if sent_message_id:
+            self.auth_service.set_last_news_message_id(telegram_id, sent_message_id)
 
     async def _require_logged(self, chat_id: int, session: UserSession | None) -> bool:
         if not session or not session.is_logged_in or not session.account_username:
@@ -480,3 +486,8 @@ class TelegramBotService:
             lines.append(f"• <b>{username}</b>: {text}")
 
         return "\n".join(lines)
+
+    async def _delete_previous_news_message(self, chat_id: int, previous_message_id: int) -> None:
+        if previous_message_id <= 0:
+            return
+        await self.telegram_client.delete_message(chat_id, previous_message_id)

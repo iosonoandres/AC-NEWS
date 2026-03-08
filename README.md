@@ -7,7 +7,7 @@ Backend FastAPI per un bot news con focus Telegram, progettato per estendersi in
 - FastAPI
 - Telegram Bot API (webhook)
 - RSS aggregator con feed verticali per categoria (Gazzetta, Sky Sport, Vanity Fair, Il Sole 24 Ore, Wired, GialloZafferano, Cookist, Artribune, Exibart, Rolling Stone, altre fonti italiane)
-- Persistenza JSON (utenti/account, commenti, valutazioni)
+- Persistenza JSON (account utenti, sessioni, commenti, valutazioni)
 
 ## Architettura
 
@@ -22,13 +22,15 @@ app/
       telegram/             # Client Telegram + keyboards
       whatsapp/             # Stub integrazione futura
   services/                 # Business logic (auth, news, feedback, telegram flow)
-  storage/                  # JSON store (users/comments/ratings)
+  storage/                  # JSON store (users/sessions/comments/ratings)
   dependencies.py           # Wiring singleton servizi
   main.py                   # FastAPI app
 
 scripts/set_telegram_webhook.sh
 
 data/users.json
+
+data/sessions.json
 
 data/comments.json
 
@@ -52,6 +54,8 @@ data/ratings.json
    - numero commenti
 8. Cleanup automatico: commenti/valutazioni di notizie più vecchie di 24h vengono rimossi
 9. Filtro di rilevanza categoria lato codice (keyword scoring) per ridurre news off-topic
+10. Alla notizia successiva viene rimosso il messaggio news precedente dalla chat (no coda infinita)
+11. Cleanup automatico auth: sessioni vecchie >30 giorni rimosse; account rimossi solo se `last_login_at` >30 giorni
 
 ## Avvio locale
 
@@ -80,7 +84,9 @@ PUBLIC_BASE_URL=https://your-ngrok-url.ngrok-free.app
 REQUEST_TIMEOUT_SECONDS=10
 NEWS_CACHE_TTL_SECONDS=300
 FEEDBACK_TTL_HOURS=24
+AUTH_RETENTION_DAYS=30
 USERS_FILE=data/users.json
+SESSIONS_FILE=data/sessions.json
 COMMENTS_FILE=data/comments.json
 RATINGS_FILE=data/ratings.json
 ```

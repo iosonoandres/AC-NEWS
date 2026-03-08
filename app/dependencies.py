@@ -10,11 +10,11 @@ from app.storage.json_store import JsonUserStore
 
 settings = get_settings()
 
-user_store = JsonUserStore(settings.users_file)
+user_store = JsonUserStore(settings.users_file, settings.sessions_file)
 comments_store = JsonCommentsStore(settings.comments_file, ttl_hours=settings.feedback_ttl_hours)
 ratings_store = JsonRatingsStore(settings.ratings_file, ttl_hours=settings.feedback_ttl_hours)
 
-auth_service = AuthService(user_store)
+auth_service = AuthService(user_store, retention_days=settings.auth_retention_days)
 feedback_service = FeedbackService(comments_store, ratings_store)
 rss_client = RSSClient(timeout_seconds=settings.request_timeout_seconds)
 news_service = NewsService(
