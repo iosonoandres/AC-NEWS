@@ -28,13 +28,13 @@ app/
 
 scripts/set_telegram_webhook.sh
 
-data/users.json
+data/users.example.json
 
-data/sessions.json
+data/sessions.example.json
 
-data/comments.json
+data/comments.example.json
 
-data/ratings.json
+data/ratings.example.json
 ```
 
 ## Flusso bot implementato
@@ -103,6 +103,11 @@ export PUBLIC_BASE_URL="https://your-domain.com"
 
 Webhook endpoint atteso:
 `POST /webhook/telegram/{TELEGRAM_WEBHOOK_SECRET}`
+
+## Persistenza locale
+
+I file runtime (`data/users.json`, `data/sessions.json`, `data/comments.json`, `data/ratings.json`) sono ignorati da Git.
+Nel repository sono versionati solo i template `*.example.json`.
 
 ## Test
 

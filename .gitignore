@@ -7,3 +7,7 @@ __pycache__/
 *.pyo
 *.tmp
 *.egg-info/
+data/comments.json
+data/ratings.json
+data/users.json
+data/sessions.json
